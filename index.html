@@ -69,19 +69,25 @@
 
 <script>
 
-    const apiKey = "c9517c86614422e65599f2be9f175c3c";
+    // OpenWeatherMap current weather endpoint and API key used by this app.
+    const apiKey = "";
     const apiUrl = "https://api.openweathermap.org/data/2.5/weather";
 
+    // Cache the main UI elements once so the rest of the script can reuse them.
     const searchBox = document.querySelector(".search input");
     const searchBtn = document.querySelector(".search button");
     const geoBtn = document.getElementById("geo-btn");
     const themeToggle = document.getElementById("theme-toggle");
     const weatherIcon = document.querySelector(".weather-icon");
+
+    // Map full US state names to abbreviations so user input can be normalized.
     const states = {
         'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
     };
+    // Longest state names are checked first to avoid partial suffix matches.
     const stateNames = Object.keys(states).sort((a, b) => b.length - a.length);
 
+    // Convert inputs like "Denver Colorado" or "Denver CO" into a city/state pair.
     function parseUSLocation(input) {
         const normalizedInput = input.trim().replace(/\s+/g, ' ');
         if (!normalizedInput || normalizedInput.includes(",")) {
@@ -111,21 +117,25 @@
         return null;
     }
 
+    // Toggle the dark-mode class and keep the button label in sync.
     function applyTheme(theme) {
         const isDark = theme === "dark";
         document.body.classList.toggle("dark-mode", isDark);
         themeToggle.textContent = isDark ? "Light Mode" : "Dark Mode";
     }
 
+    // Restore the user's theme preference on page load.
     const savedTheme = localStorage.getItem("weather-theme") || "light";
     applyTheme(savedTheme);
 
+    // Flip the theme and save the new preference for future visits.
     themeToggle.addEventListener("click", () => {
         const nextTheme = document.body.classList.contains("dark-mode") ? "light" : "dark";
         localStorage.setItem("weather-theme", nextTheme);
         applyTheme(nextTheme);
     });
 
+    // Reverse geocode coordinates into readable city/state values for the UI.
     async function getLocationFromCoords(lat, lon) {
         try {
             const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
@@ -141,24 +151,26 @@
         return { city: "", state: "" };
     }
 
-// Auto-format city input to ensure comma between city and state, supporting multi-word cities and full state names
-searchBox.addEventListener('input', function(e) {
-    const parsed = parseUSLocation(searchBox.value);
-    if (parsed) {
-        searchBox.value = `${parsed.city}, ${parsed.state}`;
-    }
-});
+    // Auto-format US searches into "City, ST" while the user types.
+    searchBox.addEventListener('input', function() {
+        const parsed = parseUSLocation(searchBox.value);
+        if (parsed) {
+            searchBox.value = `${parsed.city}, ${parsed.state}`;
+        }
+    });
 
-searchBox.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        checkWeather(searchBox.value);
-    }
-});
+    // Let Enter run the same city search as clicking the search button.
+    searchBox.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            checkWeather(searchBox.value);
+        }
+    });
 
+    // Fetch weather by city/state text, validate the input, then update the UI.
     async function checkWeather(city) {
         let query = city.trim();
-        // Input validation: show error if empty or not a valid city name
+        // Reject blank or obviously invalid searches before making an API call.
         const errorMsg = document.getElementById("Invalid City Name");
         if (!query || !/^[A-Za-z .,'-]+$/.test(query)) {
             if (errorMsg) {
@@ -170,11 +182,11 @@ searchBox.addEventListener("keydown", (event) => {
         } else if (errorMsg) {
             errorMsg.textContent = "";
         }
-        // If user enters only a city name, warn for US searches
+        // Warn when a US city might be ambiguous without a state.
         if (/^[A-Za-z .'-]+$/.test(query)) {
             showWarning("For US cities, please specify a state for more accurate results (e.g., 'Denver, CO').");
         }
-        // Show a warning message above the search box
+        // Create a temporary warning message above the search row.
         function showWarning(message) {
             let warning = document.getElementById("warning");
             if (!warning) {
@@ -196,11 +208,13 @@ searchBox.addEventListener("keydown", (event) => {
                 if (warning) warning.remove();
             }, 5000);
         }
+
+        // Normalize city/state searches before sending them to OpenWeatherMap.
         const parsed = parseUSLocation(query);
         if (parsed) {
             query = `${parsed.city},${parsed.state}`;
         }
-        // If user enters City, State (no country), normalize and append ',US' for US cities.
+        // Add the country code so US city lookups resolve more accurately.
         if (/^[^,]+,\s*[A-Za-z]{2}$/.test(query)) {
             query = query.replace(/,\s*/, ',') + ',US';
         }
@@ -209,6 +223,8 @@ searchBox.addEventListener("keydown", (event) => {
         var data = await response.json();
         console.log('API Response:', data);
         let stateOverride = "";
+
+        // Reverse geocode US results to improve the state shown on screen.
         if (data.coord && data.sys && data.sys.country === "US") {
             const location = await getLocationFromCoords(data.coord.lat, data.coord.lon);
             stateOverride = location.state;
@@ -216,6 +232,7 @@ searchBox.addEventListener("keydown", (event) => {
         updateWeatherUI(data, "", stateOverride);
     }
 
+    // Fetch weather directly from latitude/longitude coordinates.
     async function checkWeatherByCoords(lat, lon) {
         console.log('API Request:', `${apiUrl}?lat=${lat}&lon=${lon}&appid=${apiKey}`);
         const response = await fetch(`${apiUrl}?lat=${lat}&lon=${lon}&appid=${apiKey}`);
@@ -226,12 +243,14 @@ searchBox.addEventListener("keydown", (event) => {
         updateWeatherUI(data, location.city, location.state);
     }
 
+    // Convert wind degrees into a compass direction like N, SW, or ENE.
     function degToCompass(num) {
         const val = Math.floor((num / 22.5) + 0.5);
         const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
         return arr[(val % 16)];
     }
 
+    // Summarize whether current weather is comfortable for a motorcycle ride.
     function getRideAdvice(data) {
         const weatherMain = data.weather && data.weather[0] ? data.weather[0].main : "";
         const tempF = Math.round((data.main.temp - 273.15) * 9/5 + 32);
@@ -272,8 +291,9 @@ searchBox.addEventListener("keydown", (event) => {
         };
     }
 
+    // Populate the weather card and optionally override city/state from geolocation.
     function updateWeatherUI(data) {
-        
+
         // Accept optional city/state override (for geolocation)
         let cityOverride = arguments[1];
         let stateOverride = arguments[2];
@@ -281,9 +301,9 @@ searchBox.addEventListener("keydown", (event) => {
             let city = cityOverride || data.name || "";
             let state = stateOverride || "";
             const rideAdvice = getRideAdvice(data);
-            // For geolocation, use override if available
+            // Prefer explicit city/state values when geolocation already supplied them.
             if (cityOverride && stateOverride) {
-                // already set
+                // Already set from reverse geocoding.
             } else if (data.sys && data.sys.country === "US") {
                 // Only extract a state when the input actually ends with a valid US state.
                 const input = searchBox.value.trim();
@@ -296,13 +316,15 @@ searchBox.addEventListener("keydown", (event) => {
                     }
                 }
                 if (!state) {
-                    // fallback: just show country code
+                    // Fallback to the country code if no state abbreviation is available.
                     state = "US";
                 }
             } else if (data.sys && data.sys.country) {
-                // For non-US, show country code
+                // Non-US searches display the returned country code instead of a US state.
                 state = data.sys.country;
             }
+
+            // Fill the main weather summary and ride advice panel.
             const rideAdviceBox = document.querySelector(".ride-advice");
             rideAdviceBox.classList.remove("good", "not-good");
             rideAdviceBox.classList.add(rideAdvice.status);
@@ -313,7 +335,7 @@ searchBox.addEventListener("keydown", (event) => {
             document.querySelector(".humidity-value").innerHTML = data.main.humidity + "%";
             document.querySelector(".wind-speed").innerHTML = data.wind.speed + " MPH";
 
-
+            // Swap the hero icon based on the current weather type.
             if(data.weather[0].main == "Clouds"){
                 weatherIcon.src = "images/cloud.png";
             } else if(data.weather[0].main == "Rain"){
@@ -328,6 +350,7 @@ searchBox.addEventListener("keydown", (event) => {
                 weatherIcon.src = "images/default.png"; // default icon for other conditions
             }
 
+            // Gust and direction are optional fields in the API response, so guard them.
             if (data.wind.gust !== undefined) {
                 document.querySelector(".wind-gust").innerHTML = data.wind.gust + " MPH";
             } else {
@@ -339,8 +362,10 @@ searchBox.addEventListener("keydown", (event) => {
                 document.querySelector(".wind-direction").innerHTML = "-";
             }
 
+            // Reveal the hidden weather section after successful data load.
             document.querySelector(".weather").style.display = "block";
         } else {
+            // Fallback values used when the API does not return a usable weather payload.
             const rideAdviceBox = document.querySelector(".ride-advice");
             rideAdviceBox.classList.remove("good", "not-good");
             document.querySelector(".ride-advice-text").innerHTML = "Ride advice unavailable for this location.";
@@ -354,10 +379,12 @@ searchBox.addEventListener("keydown", (event) => {
         }
     }
 
+    // Search using whatever the user typed into the city field.
     searchBtn.addEventListener("click", () => {
         checkWeather(searchBox.value);
     });
 
+    // Ask the browser for the current location, then search by coordinates.
     geoBtn.addEventListener("click", () => {
         // Clear search input and state/city display before geolocation
         searchBox.value = "";
