@@ -1,0 +1,344 @@
+:root {
+    --page-bg: #303135;
+    --card-bg: linear-gradient(135deg, #a8edea, #fed6e3);
+    --surface: #f7f7fa;
+    --surface-border: #d1d5db;
+    --text-main: #111;
+    --text-soft: #555;
+    --input-text: #232946;
+    --surface-hover: #f0f4fa;
+    --detail-bg: rgba(255, 255, 255, 0.32);
+    --panel-bg: rgba(255, 255, 255, 0.34);
+    --divider: rgba(17, 17, 17, 0.12);
+    --shadow-soft: 0 2px 8px rgba(80, 80, 180, 0.08);
+    --shadow-hover: 0 4px 16px rgba(80, 80, 180, 0.15);
+    --accent: #8ec5fc;
+}
+
+body.dark-mode {
+    --page-bg: #12161d;
+    --card-bg: linear-gradient(145deg, #1f2a38, #16202c);
+    --surface: #243242;
+    --surface-border: #31465d;
+    --text-main: #edf4ff;
+    --text-soft: #a8b6c9;
+    --input-text: #edf4ff;
+    --surface-hover: #2c3d50;
+    --detail-bg: rgba(255, 255, 255, 0.08);
+    --panel-bg: rgba(255, 255, 255, 0.08);
+    --divider: rgba(237, 244, 255, 0.14);
+    --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.22);
+    --shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.28);
+    --accent: #7bc6ff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Quicksand', Arial, Helvetica, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+    background: var(--page-bg);
+}
+
+.card {
+    width: min(100%, 470px);
+    background: var(--card-bg);
+    color: var(--text-main);
+    border-radius: 24px;
+    padding: 32px 28px;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+}
+
+.card-topbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+
+#theme-toggle {
+    border: 1.5px solid var(--surface-border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-main);
+    padding: 9px 14px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.2s;
+}
+
+#theme-toggle:hover {
+    border-color: var(--accent);
+    background: var(--surface-hover);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+}
+
+.search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52px 52px;
+    align-items: center;
+    gap: 12px;
+}
+
+.search input {
+    width: 100%;
+    min-width: 0;
+    height: 52px;
+    padding: 0 18px;
+    border: 1.5px solid var(--surface-border);
+    border-radius: 18px;
+    font-size: 1rem;
+    background: var(--surface);
+    color: var(--input-text);
+    box-shadow: var(--shadow-soft);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.search input:focus {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-hover);
+}
+
+.search button,
+#geo-btn {
+    width: 52px;
+    height: 52px;
+    border: 1.5px solid var(--surface-border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.2s;
+}
+
+.search button:hover,
+#geo-btn:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-hover);
+    background: var(--surface-hover);
+    transform: translateY(-1px);
+}
+
+.search button img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+#geo-btn {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.error {
+    min-height: 24px;
+    margin-top: 10px;
+    padding-left: 10px;
+    text-align: left;
+    font-size: 14px;
+    display: none;
+}
+
+.weather {
+    display: none;
+    margin-top: 28px;
+}
+
+.ride-advice {
+    margin-bottom: 22px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: var(--panel-bg);
+    text-align: left;
+}
+
+.ride-advice.good {
+    background: rgba(120, 214, 141, 0.22);
+    border: 1px solid rgba(61, 131, 77, 0.24);
+}
+
+.ride-advice.not-good {
+    background: rgba(255, 122, 122, 0.18);
+    border: 1px solid rgba(170, 55, 55, 0.22);
+}
+
+.ride-advice-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin-bottom: 6px;
+}
+
+.ride-advice-text {
+    font-size: 1.05rem;
+    line-height: 1.45;
+    font-weight: 700;
+}
+
+.weather-flex {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding-bottom: 24px;
+}
+
+.weather-icon {
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+}
+
+.weather-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    text-align: left;
+}
+
+.weather-info .temp {
+    font-size: clamp(2.7rem, 6vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.city-state {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.city {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.state {
+    font-size: 1rem;
+    color: var(--text-soft);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.deatails {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+    padding-top: 24px;
+    border-top: 1px solid var(--divider);
+}
+
+.col {
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--detail-bg);
+    text-align: left;
+}
+
+.col img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.humidity,
+.wind {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.humidity h2,
+.wind h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.humidity p,
+.wind p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-soft);
+    letter-spacing: 0.02em;
+}
+
+.wind-direction-label {
+    padding-top: 4px;
+}
+
+@media (max-width: 560px) {
+    .card {
+        padding: 24px 20px;
+        border-radius: 20px;
+    }
+
+    .search {
+        grid-template-columns: minmax(0, 1fr) 48px 48px;
+        gap: 10px;
+    }
+
+    .search input,
+    .search button,
+    #geo-btn {
+        height: 48px;
+    }
+
+    .search button,
+    #geo-btn {
+        width: 48px;
+    }
+
+    .weather-flex {
+        flex-direction: column;
+        gap: 14px;
+        padding-bottom: 20px;
+    }
+
+    .ride-advice {
+        text-align: center;
+    }
+
+    .weather-info,
+    .city-state {
+        align-items: center;
+        text-align: center;
+    }
+
+    .deatails {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}

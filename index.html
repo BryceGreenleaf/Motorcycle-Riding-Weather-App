@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <!-- Google Fonts: Quicksand for bubbly look -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Link to external CSS file for styling -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main card container for the weather app -->
+    <div class="card">
+        <div class="card-topbar">
+            <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Dark Mode</button>
+        </div>
+        <!-- Search section: input for city name and search button -->
+        <div class="search">
+            <input type="text" placeholder="Enter City Name" spellcheck="false">
+            <button><img src="images/search.png"></button>
+            <button id="geo-btn" title="Use My Location">📍</button>
+        </div>
+        <div class="error">
+            <p id="Invalid City Name"></p>
+        </div>
+        <!-- Weather display section -->
+        <div class="weather">
+            <div class="ride-advice">
+                <p class="ride-advice-label">Motorcycle Ride Check</p>
+                <h2 class="ride-advice-text">Checking ride conditions...</h2>
+            </div>
+            <!-- Weather icon and info side by side -->
+            <div class="weather-flex">
+                <img src="images/rain.png" alt="weather-icon" class="weather-icon">
+                <div class="weather-info">
+                    <h1 class="temp">66°F</h1>
+                    <div class="city-state">
+                        <h2 class="city">New York</h2>
+                        <div class="state">NY</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Weather details: humidity and wind -->
+            <div class="deatails">
+                <!-- Humidity column -->
+                <div class="col">
+                    <img src="images/humidity.png" alt="Humidity Icon">
+                    <div class="humidity">
+                        <p>Humidity Percent</p>
+                        <h2 class="humidity-value">80%</h2>
+                    </div>
+                </div>
+                <!-- Wind column -->
+                <div class="col">
+                    <img src="images/wind.png" alt="wind Icon">
+                    <div class="wind">
+                        <p>Wind Speed</p>
+                        <h2 class="wind-speed">15 MPH</h2>
+                        <p class="wind-direction-label">Direction</p>
+                        <h2 class="wind-direction">-</h2>
+                        <p>Gust</p>
+                        <h2 class="wind-gust">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+    const apiKey = "c9517c86614422e65599f2be9f175c3c";
+    const apiUrl = "https://api.openweathermap.org/data/2.5/weather";
+
+    const searchBox = document.querySelector(".search input");
+    const searchBtn = document.querySelector(".search button");
+    const geoBtn = document.getElementById("geo-btn");
+    const themeToggle = document.getElementById("theme-toggle");
+    const weatherIcon = document.querySelector(".weather-icon");
+    const states = {
+        'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+    };
+    const stateNames = Object.keys(states).sort((a, b) => b.length - a.length);
+
+    function parseUSLocation(input) {
+        const normalizedInput = input.trim().replace(/\s+/g, ' ');
+        if (!normalizedInput || normalizedInput.includes(",")) {
+            return null;
+        }
+
+        const lowerInput = normalizedInput.toLowerCase();
+        for (const stateName of stateNames) {
+            const suffix = ` ${stateName}`;
+            if (lowerInput.endsWith(suffix)) {
+                const cityPart = normalizedInput.slice(0, -suffix.length).trim();
+                if (cityPart) {
+                    return { city: cityPart, state: states[stateName] };
+                }
+            }
+        }
+
+        const abbrMatch = normalizedInput.match(/^(.+?)\s+([A-Za-z]{2})$/);
+        if (abbrMatch) {
+            const cityPart = abbrMatch[1].trim();
+            const statePart = abbrMatch[2].toUpperCase();
+            if (cityPart && Object.values(states).includes(statePart)) {
+                return { city: cityPart, state: statePart };
+            }
+        }
+
+        return null;
+    }
+
+    function applyTheme(theme) {
+        const isDark = theme === "dark";
+        document.body.classList.toggle("dark-mode", isDark);
+        themeToggle.textContent = isDark ? "Light Mode" : "Dark Mode";
+    }
+
+    const savedTheme = localStorage.getItem("weather-theme") || "light";
+    applyTheme(savedTheme);
+
+    themeToggle.addEventListener("click", () => {
+        const nextTheme = document.body.classList.contains("dark-mode") ? "light" : "dark";
+        localStorage.setItem("weather-theme", nextTheme);
+        applyTheme(nextTheme);
+    });
+
+    async function getLocationFromCoords(lat, lon) {
+        try {
+            const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+            const geoData = await geoResp.json();
+            if (geoData.address) {
+                const city = geoData.address.city || geoData.address.town || geoData.address.village || "";
+                const rawState = geoData.address.state || geoData.address.region || geoData.address.county || "";
+                const state = states[rawState.toLowerCase()] || rawState;
+                return { city, state };
+            }
+        } catch (e) {}
+
+        return { city: "", state: "" };
+    }
+
+// Auto-format city input to ensure comma between city and state, supporting multi-word cities and full state names
+searchBox.addEventListener('input', function(e) {
+    const parsed = parseUSLocation(searchBox.value);
+    if (parsed) {
+        searchBox.value = `${parsed.city}, ${parsed.state}`;
+    }
+});
+
+searchBox.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        checkWeather(searchBox.value);
+    }
+});
+
+    async function checkWeather(city) {
+        let query = city.trim();
+        // Input validation: show error if empty or not a valid city name
+        const errorMsg = document.getElementById("Invalid City Name");
+        if (!query || !/^[A-Za-z .,'-]+$/.test(query)) {
+            if (errorMsg) {
+                errorMsg.textContent = "Please type in a valid city.";
+                errorMsg.style.color = "#ff4d4d";
+                errorMsg.style.fontWeight = "bold";
+            }
+            return;
+        } else if (errorMsg) {
+            errorMsg.textContent = "";
+        }
+        // If user enters only a city name, warn for US searches
+        if (/^[A-Za-z .'-]+$/.test(query)) {
+            showWarning("For US cities, please specify a state for more accurate results (e.g., 'Denver, CO').");
+        }
+        // Show a warning message above the search box
+        function showWarning(message) {
+            let warning = document.getElementById("warning");
+            if (!warning) {
+                warning = document.createElement("div");
+                warning.id = "warning";
+                warning.style.color = "#ffb347";
+                warning.style.background = "#222";
+                warning.style.padding = "10px";
+                warning.style.borderRadius = "8px";
+                warning.style.marginBottom = "10px";
+                warning.style.fontWeight = "bold";
+                warning.style.textAlign = "center";
+                warning.style.fontSize = "1.1em";
+                const searchBox = document.querySelector(".search");
+                searchBox.parentNode.insertBefore(warning, searchBox);
+            }
+            warning.textContent = message;
+            setTimeout(() => {
+                if (warning) warning.remove();
+            }, 5000);
+        }
+        const parsed = parseUSLocation(query);
+        if (parsed) {
+            query = `${parsed.city},${parsed.state}`;
+        }
+        // If user enters City, State (no country), normalize and append ',US' for US cities.
+        if (/^[^,]+,\s*[A-Za-z]{2}$/.test(query)) {
+            query = query.replace(/,\s*/, ',') + ',US';
+        }
+        console.log('API Request:', `${apiUrl}?q=${encodeURIComponent(query)}&appid=${apiKey}`);
+        const response = await fetch(`${apiUrl}?q=${encodeURIComponent(query)}&appid=${apiKey}`);
+        var data = await response.json();
+        console.log('API Response:', data);
+        let stateOverride = "";
+        if (data.coord && data.sys && data.sys.country === "US") {
+            const location = await getLocationFromCoords(data.coord.lat, data.coord.lon);
+            stateOverride = location.state;
+        }
+        updateWeatherUI(data, "", stateOverride);
+    }
+
+    async function checkWeatherByCoords(lat, lon) {
+        console.log('API Request:', `${apiUrl}?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        const response = await fetch(`${apiUrl}?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        var data = await response.json();
+        console.log('API Response:', data);
+
+        const location = await getLocationFromCoords(lat, lon);
+        updateWeatherUI(data, location.city, location.state);
+    }
+
+    function degToCompass(num) {
+        const val = Math.floor((num / 22.5) + 0.5);
+        const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+        return arr[(val % 16)];
+    }
+
+    function getRideAdvice(data) {
+        const weatherMain = data.weather && data.weather[0] ? data.weather[0].main : "";
+        const tempF = Math.round((data.main.temp - 273.15) * 9/5 + 32);
+        const windSpeed = Number(data.wind.speed || 0);
+        const windGust = Number(data.wind.gust || 0);
+        const unsafeConditions = ["Rain", "Snow", "Thunderstorm", "Drizzle", "Tornado", "Squall", "Ash", "Smoke", "Dust", "Sand", "Fog", "Mist", "Haze"];
+        const shouldAvoidRide =
+            unsafeConditions.includes(weatherMain) ||
+            tempF < 40 ||
+            tempF > 95 ||
+            windSpeed >= 20 ||
+            windGust >= 30;
+
+        if (shouldAvoidRide) {
+            let reason = "Conditions are not ideal.";
+            if (unsafeConditions.includes(weatherMain)) {
+                reason = `Current conditions show ${weatherMain.toLowerCase()}.`;
+            } else if (windGust >= 30 || windSpeed >= 20) {
+                reason = "Wind is strong for a comfortable ride.";
+            } else if (tempF < 40) {
+                reason = "It is pretty cold for riding.";
+            } else if (tempF > 95) {
+                reason = "It is very hot for riding.";
+            }
+            return {
+                status: "not-good",
+                text: "Not a good time to ride.",
+                detail: reason
+            };
+        }
+
+        return {
+            status: "good",
+            text: "Good time to ride.",
+            detail: tempF >= 80
+                ? "Weather looks good for a ride. Please be sure to stay hydrated."
+                : "Weather looks fairly comfortable for a motorcycle ride."
+        };
+    }
+
+    function updateWeatherUI(data) {
+        
+        // Accept optional city/state override (for geolocation)
+        let cityOverride = arguments[1];
+        let stateOverride = arguments[2];
+        if (data.main && data.wind) {
+            let city = cityOverride || data.name || "";
+            let state = stateOverride || "";
+            const rideAdvice = getRideAdvice(data);
+            // For geolocation, use override if available
+            if (cityOverride && stateOverride) {
+                // already set
+            } else if (data.sys && data.sys.country === "US") {
+                // Only extract a state when the input actually ends with a valid US state.
+                const input = searchBox.value.trim();
+                if (/^[^,]+,\s*([A-Za-z]{2})$/.test(input)) {
+                    state = input.split(",").pop().trim().toUpperCase();
+                } else {
+                    const parsed = parseUSLocation(input);
+                    if (parsed) {
+                        state = parsed.state;
+                    }
+                }
+                if (!state) {
+                    // fallback: just show country code
+                    state = "US";
+                }
+            } else if (data.sys && data.sys.country) {
+                // For non-US, show country code
+                state = data.sys.country;
+            }
+            const rideAdviceBox = document.querySelector(".ride-advice");
+            rideAdviceBox.classList.remove("good", "not-good");
+            rideAdviceBox.classList.add(rideAdvice.status);
+            document.querySelector(".ride-advice-text").innerHTML = `${rideAdvice.text} ${rideAdvice.detail}`;
+            document.querySelector(".city").innerHTML = city;
+            document.querySelector(".state").innerHTML = state;
+            document.querySelector(".temp").innerHTML = Math.round((data.main.temp - 273.15) * 9/5 + 32) + "°F";
+            document.querySelector(".humidity-value").innerHTML = data.main.humidity + "%";
+            document.querySelector(".wind-speed").innerHTML = data.wind.speed + " MPH";
+
+
+            if(data.weather[0].main == "Clouds"){
+                weatherIcon.src = "images/cloud.png";
+            } else if(data.weather[0].main == "Rain"){
+                weatherIcon.src = "images/rain.png";
+            } else if(data.weather[0].main == "Clear"){
+                weatherIcon.src = "images/sun.png";
+            } else if(data.weather[0].main == "Snow"){
+                weatherIcon.src = "images/snow.png";
+            } else if(data.weather[0].main == "Thunderstorm"){
+                weatherIcon.src = "images/thunderstorm.png";
+            } else {
+                weatherIcon.src = "images/default.png"; // default icon for other conditions
+            }
+
+            if (data.wind.gust !== undefined) {
+                document.querySelector(".wind-gust").innerHTML = data.wind.gust + " MPH";
+            } else {
+                document.querySelector(".wind-gust").innerHTML = "-";
+            }
+            if (data.wind.deg !== undefined) {
+                document.querySelector(".wind-direction").innerHTML = degToCompass(data.wind.deg) + ` (${data.wind.deg}°)`;
+            } else {
+                document.querySelector(".wind-direction").innerHTML = "-";
+            }
+
+            document.querySelector(".weather").style.display = "block";
+        } else {
+            const rideAdviceBox = document.querySelector(".ride-advice");
+            rideAdviceBox.classList.remove("good", "not-good");
+            document.querySelector(".ride-advice-text").innerHTML = "Ride advice unavailable for this location.";
+            document.querySelector(".city").innerHTML = "Not found";
+            document.querySelector(".state").innerHTML = "-";
+            document.querySelector(".temp").innerHTML = "-";
+            document.querySelector(".humidity-value").innerHTML = "-";
+            document.querySelector(".wind-speed").innerHTML = "-";
+            document.querySelector(".wind-gust").innerHTML = "-";
+            document.querySelector(".wind-direction").innerHTML = "-";
+        }
+    }
+
+    searchBtn.addEventListener("click", () => {
+        checkWeather(searchBox.value);
+    });
+
+    geoBtn.addEventListener("click", () => {
+        // Clear search input and state/city display before geolocation
+        searchBox.value = "";
+        document.querySelector(".city").innerHTML = "-";
+        document.querySelector(".state").innerHTML = "-";
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    checkWeatherByCoords(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    alert("Unable to retrieve your location.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    });
+
+    
+</script>
+
+</body>
+</html>
